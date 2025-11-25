@@ -2,8 +2,9 @@ version: '3.4'
 services:
   jorani:
     build: .
-    ports:
-      - "86:80"
+    expose:
+      - "80"
+      - "443"
     environment:
       - MYSQL_HOST=mysql
       - MYSQL_DATABASE=jorani
