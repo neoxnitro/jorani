@@ -16,15 +16,18 @@
 */
 $config['base_url'] = '';
 
+// Clean environment variables from shell/YAML quotes
+function clean_env($val)
+{
+    if (!$val || $val === false) return '';
+    $val = trim($val);
+    return preg_replace('/^["\']|["\']$/', '', $val);
+}
+
 // Allow explicit override via environment variable (Dokploy / container)
-$envBase = getenv('APP_BASE_URL');
-if ($envBase && $envBase !== false && $envBase !== '') {
-    // Strip surrounding quotes aggressively (YAML/shell escaping issues)
-    $envBase = trim($envBase);
-    $envBase = preg_replace('/^["\']|["\']$/', '', $envBase);
-    if ($envBase !== '') {
-        $config['base_url'] = rtrim($envBase, '/') . '/';
-    }
+$envBase = clean_env(getenv('APP_BASE_URL'));
+if ($envBase !== '') {
+    $config['base_url'] = rtrim($envBase, '/') . '/';
 }
 
 // Force HTTPS scheme if APP_BASE_URL provided but starts with http:// (avoid mixed content)
@@ -34,11 +37,7 @@ if ($config['base_url'] !== '' && strpos($config['base_url'], 'http://') === 0) 
 
 if ($config['base_url'] === '') {
     // Honor reverse proxy headers first (Traefik / Nginx)
-    $forceHttpsEnv = getenv('FORCE_HTTPS');
-    // Strip quotes from FORCE_HTTPS too
-    if ($forceHttpsEnv) {
-        $forceHttpsEnv = trim(preg_replace('/^["\']|["\']$/', '', $forceHttpsEnv));
-    }
+    $forceHttpsEnv = clean_env(getenv('FORCE_HTTPS'));
 
     if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
         $proto = $_SERVER['HTTP_X_FORWARDED_PROTO'];
@@ -62,9 +61,10 @@ if ($config['base_url'] === '') {
     $config['base_url'] = rtrim($root, '/') . '/';
 }
 
-// Absolute final safeguard: if host matches duckdns and we are on forwarded port 443 or FORCE_HTTPS=true, coerce https
-if (preg_match('/camelpark\.duckdns\.org$/', $config['base_url']) || (!empty($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'camelpark.duckdns.org')) {
-    if (strpos($config['base_url'], 'http://') === 0 && ((isset($_SERVER['HTTP_X_FORWARDED_PORT']) && $_SERVER['HTTP_X_FORWARDED_PORT'] == 443) || getenv('FORCE_HTTPS') === 'true')) {
+// Absolute final safeguard: if host matches duckdns and FORCE_HTTPS=true, coerce https
+$forceHttpsFinal = clean_env(getenv('FORCE_HTTPS'));
+if ($forceHttpsFinal === 'true' && strpos($config['base_url'], 'http://') === 0) {
+    if (preg_match('/camelpark\.duckdns\.org/', $config['base_url']) || (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'camelpark.duckdns.org')) {
         $config['base_url'] = 'https://' . substr($config['base_url'], 7);
     }
 }
