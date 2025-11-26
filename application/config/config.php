@@ -26,9 +26,13 @@ if ($config['base_url'] === '') {
     // Honor reverse proxy headers first (Traefik / Nginx)
     if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
         $proto = $_SERVER['HTTP_X_FORWARDED_PROTO'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PORT']) && $_SERVER['HTTP_X_FORWARDED_PORT'] == 443) {
+        $proto = 'https';
     } elseif (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
         $proto = 'https';
     } elseif (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
+        $proto = 'https';
+    } elseif (getenv('FORCE_HTTPS') === 'true') {
         $proto = 'https';
     } else {
         $proto = 'http';
