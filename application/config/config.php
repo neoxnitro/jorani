@@ -18,10 +18,13 @@ $config['base_url'] = '';
 
 // Allow explicit override via environment variable (Dokploy / container)
 $envBase = getenv('APP_BASE_URL');
-if ($envBase) {
-    // Strip surrounding quotes if present (YAML escaping issue)
-    $envBase = trim($envBase, '\'"');
-    $config['base_url'] = rtrim($envBase, '/') . '/';
+if ($envBase && $envBase !== false && $envBase !== '') {
+    // Strip surrounding quotes aggressively (YAML/shell escaping issues)
+    $envBase = trim($envBase);
+    $envBase = preg_replace('/^["\']|["\']$/', '', $envBase);
+    if ($envBase !== '') {
+        $config['base_url'] = rtrim($envBase, '/') . '/';
+    }
 }
 
 // Force HTTPS scheme if APP_BASE_URL provided but starts with http:// (avoid mixed content)
@@ -31,6 +34,12 @@ if ($config['base_url'] !== '' && strpos($config['base_url'], 'http://') === 0) 
 
 if ($config['base_url'] === '') {
     // Honor reverse proxy headers first (Traefik / Nginx)
+    $forceHttpsEnv = getenv('FORCE_HTTPS');
+    // Strip quotes from FORCE_HTTPS too
+    if ($forceHttpsEnv) {
+        $forceHttpsEnv = trim(preg_replace('/^["\']|["\']$/', '', $forceHttpsEnv));
+    }
+
     if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
         $proto = $_SERVER['HTTP_X_FORWARDED_PROTO'];
     } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PORT']) && $_SERVER['HTTP_X_FORWARDED_PORT'] == 443) {
@@ -39,7 +48,7 @@ if ($config['base_url'] === '') {
         $proto = 'https';
     } elseif (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
         $proto = 'https';
-    } elseif (getenv('FORCE_HTTPS') === 'true') {
+    } elseif ($forceHttpsEnv === 'true') {
         $proto = 'https';
     } else {
         $proto = 'http';
