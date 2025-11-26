@@ -16,60 +16,27 @@
 */
 $config['base_url'] = '';
 
-// Clean environment variables from shell/YAML quotes
-function clean_env($val)
-{
-    if (!$val || $val === false) return '';
-    $val = trim($val);
-    // Remove surrounding quotes aggressively
-    $val = trim($val, '"\'');
-    return $val;
-}
+// HARD-CODED for Dokploy deployment (environment variable escaping issue)
+$config['base_url'] = 'https://camelpark.duckdns.org/';
 
-// Allow explicit override via environment variable (Dokploy / container)
-$envBase = clean_env(getenv('APP_BASE_URL'));
-if ($envBase !== '') {
-    $config['base_url'] = rtrim($envBase, '/') . '/';
-}
-
-// Force HTTPS scheme if APP_BASE_URL provided but starts with http:// (avoid mixed content)
-if ($config['base_url'] !== '' && strpos($config['base_url'], 'http://') === 0) {
-    $config['base_url'] = 'https://' . substr($config['base_url'], 7);
-}
-
+// Fallback: try environment variable with quote cleaning
 if ($config['base_url'] === '') {
-    // Honor reverse proxy headers first (Traefik / Nginx)
-    $forceHttpsEnv = clean_env(getenv('FORCE_HTTPS'));
+    function clean_env($val)
+    {
+        if (!$val || $val === false) return '';
+        $val = trim($val);
+        // Remove surrounding quotes aggressively
+        $val = trim($val, '"\'');
+        return $val;
+    }
 
-    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
-        $proto = $_SERVER['HTTP_X_FORWARDED_PROTO'];
-    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PORT']) && $_SERVER['HTTP_X_FORWARDED_PORT'] == 443) {
-        $proto = 'https';
-    } elseif (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-        $proto = 'https';
-    } elseif (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
-        $proto = 'https';
-    } elseif ($forceHttpsEnv === 'true') {
-        $proto = 'https';
-    } else {
-        $proto = 'http';
+    $envBase = clean_env(getenv('APP_BASE_URL'));
+    if ($envBase !== '') {
+        $config['base_url'] = rtrim($envBase, '/') . '/';
     }
-    $host = isset($_SERVER['HTTP_X_FORWARDED_HOST']) ? $_SERVER['HTTP_X_FORWARDED_HOST'] : (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost');
-    $root = $proto . '://' . $host;
-    $scriptDir = dirname(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '/');
-    if ($scriptDir !== '/' && $scriptDir !== '.') {
-        $root .= $scriptDir;
-    }
-    $config['base_url'] = rtrim($root, '/') . '/';
 }
 
-// Absolute final safeguard: if host matches duckdns and FORCE_HTTPS=true, coerce https
-$forceHttpsFinal = clean_env(getenv('FORCE_HTTPS'));
-if ($forceHttpsFinal === 'true' && strpos($config['base_url'], 'http://') === 0) {
-    if (preg_match('/camelpark\.duckdns\.org/', $config['base_url']) || (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'camelpark.duckdns.org')) {
-        $config['base_url'] = 'https://' . substr($config['base_url'], 7);
-    }
-}
+// Base URL is now set - no further fallback needed
 
 /*
 |--------------------------------------------------------------------------
