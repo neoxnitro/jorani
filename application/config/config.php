@@ -21,10 +21,8 @@ function clean_env($val)
 {
     if (!$val || $val === false) return '';
     $val = trim($val);
-    // Remove surrounding quotes (both single and double, multiple times if nested)
-    while (preg_match('/^["\'](.+)["\']$/', $val, $matches)) {
-        $val = $matches[1];
-    }
+    // Remove surrounding quotes aggressively
+    $val = trim($val, '"\'');
     return $val;
 }
 
