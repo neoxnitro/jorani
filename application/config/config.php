@@ -22,6 +22,11 @@ if ($envBase) {
     $config['base_url'] = rtrim($envBase, '/') . '/';
 }
 
+// Force HTTPS scheme if APP_BASE_URL provided but starts with http:// (avoid mixed content)
+if ($config['base_url'] !== '' && strpos($config['base_url'], 'http://') === 0) {
+    $config['base_url'] = 'https://' . substr($config['base_url'], 7);
+}
+
 if ($config['base_url'] === '') {
     // Honor reverse proxy headers first (Traefik / Nginx)
     if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
@@ -44,6 +49,13 @@ if ($config['base_url'] === '') {
         $root .= $scriptDir;
     }
     $config['base_url'] = rtrim($root, '/') . '/';
+}
+
+// Absolute final safeguard: if host matches duckdns and we are on forwarded port 443 or FORCE_HTTPS=true, coerce https
+if (preg_match('/camelpark\.duckdns\.org$/', $config['base_url']) || (!empty($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'camelpark.duckdns.org')) {
+    if (strpos($config['base_url'], 'http://') === 0 && ((isset($_SERVER['HTTP_X_FORWARDED_PORT']) && $_SERVER['HTTP_X_FORWARDED_PORT'] == 443) || getenv('FORCE_HTTPS') === 'true')) {
+        $config['base_url'] = 'https://' . substr($config['base_url'], 7);
+    }
 }
 
 /*
