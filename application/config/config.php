@@ -14,7 +14,7 @@
 | path to your installation.
 |
 */
-$config['base_url'] = 'https://camelpark.duckdns.org/';
+$config['base_url'] = '';
 
 // Clean environment variables from shell/YAML quotes
 function clean_env($val)
