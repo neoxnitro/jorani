@@ -14,14 +14,18 @@
 | path to your installation.
 |
 */
-$config['base_url'] = '';
+$config['base_url'] = 'https://camelpark.duckdns.org/';
 
 // Clean environment variables from shell/YAML quotes
 function clean_env($val)
 {
     if (!$val || $val === false) return '';
     $val = trim($val);
-    return preg_replace('/^["\']|["\']$/', '', $val);
+    // Remove surrounding quotes (both single and double, multiple times if nested)
+    while (preg_match('/^["\'](.+)["\']$/', $val, $matches)) {
+        $val = $matches[1];
+    }
+    return $val;
 }
 
 // Allow explicit override via environment variable (Dokploy / container)
