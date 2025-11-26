@@ -19,6 +19,8 @@ $config['base_url'] = '';
 // Allow explicit override via environment variable (Dokploy / container)
 $envBase = getenv('APP_BASE_URL');
 if ($envBase) {
+    // Strip surrounding quotes if present (YAML escaping issue)
+    $envBase = trim($envBase, '\'"');
     $config['base_url'] = rtrim($envBase, '/') . '/';
 }
 
